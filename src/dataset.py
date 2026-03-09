@@ -37,7 +37,6 @@ class SherlockVideoDataset(Dataset):
             ret, frame = cap.read()
             if not ret:
                 break
-            # Convert BGR to RGB
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frames.append(frame)
         cap.release()
@@ -48,22 +47,17 @@ class SherlockVideoDataset(Dataset):
         video_id = os.path.splitext(video_filename)[0]
         video_path = os.path.join(self.data_dir, video_filename)
         
-        # Read frames
         frames = self.extract_frames(video_path)
         
-        # Apply transforms if any (transforms usually expect PIL or Tensor, 
-        # so we will assume transform handles numpy (H, W, C) or we loop)
         frame_tensors = []
         for frame in frames:
             if self.transform:
                 frame = self.transform(frame)
             frame_tensors.append(frame)
             
-        # Stack frames to (num_frames, C, H, W)
         if len(frame_tensors) > 0 and isinstance(frame_tensors[0], torch.Tensor):
             frame_tensors = torch.stack(frame_tensors)
         else:
-            # Fallback if no transform
             frame_tensors = torch.tensor(np.array(frames)).permute(0, 3, 1, 2).float() / 255.0
 
         if self.is_train:

@@ -41,16 +41,13 @@ def generate_submission(model_path="best_model.pth", data_dir="../dataset/test",
     with torch.no_grad():
         for frames, video_id in tqdm(test_loader, desc="Testing"):
             frames = frames.to(device)
-            # Batch size is 1 for testing simplicity
             vid = video_id[0]
             
             scores = model(frames) # (1, S)
             scores = scores.squeeze(0).cpu().numpy() # (S,)
             
-            # Predict sequence order: lowest scores correspond to earliest frames
             pred_order = scores.argsort().tolist()
             
-            # Format order as space-separated list
             order_str = " ".join(map(str, pred_order))
             
             submission_data.append({
@@ -58,7 +55,6 @@ def generate_submission(model_path="best_model.pth", data_dir="../dataset/test",
                 "order": order_str
             })
 
-    # Save to CSV
     df = pd.DataFrame(submission_data)
     df.to_csv(output_csv, index=False)
     print(f"Saved submission to {output_csv}")

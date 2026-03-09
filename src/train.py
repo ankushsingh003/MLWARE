@@ -13,8 +13,6 @@ def train(epochs=10, batch_size=4, lr=1e-4, data_dir='../dataset/train', labels_
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # Transforms (ResNet expects 224x224 and specific normalization)
-    # However we get numpy arrays (H, W, C) from cv2.
     transform = transforms.Compose([
         transforms.ToTensor(), # converts HWC [0,255] to CHW [0.0, 1.0]
         transforms.Resize((224, 224), antialias=True),
@@ -23,12 +21,10 @@ def train(epochs=10, batch_size=4, lr=1e-4, data_dir='../dataset/train', labels_
 
     full_dataset = SherlockVideoDataset(data_dir=data_dir, labels_file=labels_file, transform=transform, is_train=True)
     
-    # Check if dataset is empty
     if len(full_dataset) == 0:
         print(f"No videos found in {data_dir}. Please place dataset files first.")
         return
 
-    # Split into train and val
     val_size = int(0.2 * len(full_dataset))
     train_size = len(full_dataset) - val_size
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
@@ -62,7 +58,6 @@ def train(epochs=10, batch_size=4, lr=1e-4, data_dir='../dataset/train', labels_
 
         train_loss /= len(train_loader)
 
-        # Validation
         model.eval()
         val_loss = 0.0
         val_tau = 0.0
@@ -76,21 +71,13 @@ def train(epochs=10, batch_size=4, lr=1e-4, data_dir='../dataset/train', labels_
                 loss = criterion(scores, targets)
                 val_loss += loss.item()
                 
-                # Compute Kendall's Tau
-                # Scores represent a value per frame. 
-                # According to our loss, frame i before frame j means score_i < score_j.
-                # So argsort(scores) gives the chronological order mapping!
                 
-                # To get predicted frame order indices:
-                # We sort the indices [0, 1, ..., S-1] based on their scores.
                 for b in range(scores.size(0)):
                     b_scores = scores[b].cpu().numpy()
                     b_targets = targets[b].cpu().numpy().tolist()
                     
-                    # predicted chrononological order: frames with lowest scores come first
                     pred_order = b_scores.argsort().tolist()
                     
-                    # Truth is the b_targets as order
                     tau = calculate_kendall_tau(pred_order, b_targets)
                     val_tau += tau
 
@@ -105,7 +92,4 @@ def train(epochs=10, batch_size=4, lr=1e-4, data_dir='../dataset/train', labels_
             torch.save(model.state_dict(), "best_model.pth")
 
 if __name__ == '__main__':
-    # Default execution
-    # Ensure directories exist and data is populated before running.
-    # train(epochs=10, batch_size=4)
     pass
