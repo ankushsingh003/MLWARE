@@ -72,6 +72,8 @@ class SherlockVideoDataset(Dataset):
 
         if self.is_train:
             target_order = self.labels.get(video_id, [])
+            # Shift 1-indexed labels to 0-indexed
+            target_order = [x - 1 for x in target_order]
             target = torch.tensor(target_order, dtype=torch.long)
             return frame_tensors, target
         else:

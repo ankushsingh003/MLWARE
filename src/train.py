@@ -10,7 +10,7 @@ from dataset import SherlockVideoDataset
 from model import FrameReorderingModel
 from loss import MarginRankingLossPairs, calculate_kendall_tau
 
-def train(epochs=10, batch_size=4, lr=1e-4, data_dir='dataset/train', labels_file='dataset/train_labels.json'):
+def train(epochs=10, batch_size=4, lr=1e-4, data_dir='dataset/train', labels_file='dataset/train_labels.json', num_videos=None):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
@@ -21,6 +21,8 @@ def train(epochs=10, batch_size=4, lr=1e-4, data_dir='dataset/train', labels_fil
     ])
 
     full_dataset = SherlockVideoDataset(data_dir=data_dir, labels_file=labels_file, transform=transform, is_train=True)
+    if num_videos:
+        full_dataset.video_files = full_dataset.video_files[:num_videos]
     
     if len(full_dataset) == 0:
         print(f"No videos found in {data_dir}. Please place dataset files first.")
@@ -30,8 +32,8 @@ def train(epochs=10, batch_size=4, lr=1e-4, data_dir='dataset/train', labels_fil
     train_size = len(full_dataset) - val_size
     train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
     model = FrameReorderingModel().to(device)
     criterion = MarginRankingLossPairs(margin=0.1).to(device)
@@ -93,4 +95,22 @@ def train(epochs=10, batch_size=4, lr=1e-4, data_dir='dataset/train', labels_fil
             torch.save(model.state_dict(), "best_model.pth")
 
 if __name__ == '__main__':
-    pass
+    parser = argparse.ArgumentParser(description='Train Sherlock Frame Reordering Model')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs')
+    parser.add_argument('--batch_size', type=int, default=1, help='Batch size')
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--data_dir', type=str, default='dataset/train', help='Train data directory')
+    parser.add_argument('--labels_file', type=str, default='dataset/train_labels.json', help='Labels JSON file')
+    
+    parser.add_argument('--num_videos', type=int, default=None, help='Limit number of videos for training')
+    
+    args = parser.parse_args()
+    
+    train(
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        data_dir=args.data_dir,
+        labels_file=args.labels_file,
+        num_videos=args.num_videos
+    )
